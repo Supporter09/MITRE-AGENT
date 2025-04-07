@@ -1,0 +1,24 @@
+# Core LLM & LangChain tools
+langchain
+langgraph
+langmem
+langgraph-supervisor
+langchain-openai
+langchain-ollama
+openai
+
+# Local Ollama models
+ollama
+
+# Vector DB & semantic memory
+qdrant-client
+mem0ai
+
+# Streamlit UI
+streamlit
+
+# Utilities
+python-dotenv
+tqdm
+requests
+pydantic
