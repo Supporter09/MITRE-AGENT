@@ -1,0 +1,18 @@
+[
+  {
+    "role": "user",
+    "content": "What issue link to when i got hacked by clicking on link on phising email."
+  },
+  {
+    "role": "assistant",
+    "content": "When you got hacked by clicking on a link in a phishing email, the relevant MITRE ATT&CK technique is T1566 for phishing. This technique describes how attackers use deceptive emails or messages to trick users into providing sensitive information or downloading malware. In your case, the attacker used a phishing email to gain initial access to your system."
+  },
+  {
+    "role": "user",
+    "content": " An attacker leveraged a phishing email disguised as a software update notification to deliver malware, establishing persistence on the compromised host."
+  },
+  {
+    "role": "assistant",
+    "content": "## MITRE ATT&CK Mapping Report\n\n**Scenario:** An attacker used a phishing email disguised as a software update notification to deliver malware, establishing persistence on the compromised host.\n\n**Matching Techniques:**\n*   **T1566 (Phishing):** The scenario describes an attacker leveraging a phishing email to gain initial access and deliver malware. This technique directly aligns with the user's reported attack vector.\n*   **T1053 (Persistence):** The malware installed by the attacker allows automatic execution on system startup, enabling ongoing unauthorized access. This technique matches the persistence mechanism used in the scenario.\n\n**(Optional) Considered Techniques (Not Matched):**\n*   T1586.002 and T1585.002 (Email Accounts): These techniques focus on different aspects of email account compromise, which do not directly apply to the described phishing attack leading to malware persistence.\n\n**Conclusion:** The analysis confirms that the scenario aligns with MITRE ATT&CK techniques T1566 for initial access via phishing and T1053 for maintaining persistent access through malware. These findings highlight the importance of robust email security measures and continuous monitoring to prevent such attacks."
+  }
+]

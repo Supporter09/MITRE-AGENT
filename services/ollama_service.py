@@ -1,10 +1,10 @@
 from langchain_ollama import OllamaEmbeddings
 
 
-def generate_embeddings(documents):
+def generate_embeddings(documents, model = 'nomic-embed-text'):
     """Generate embeddings for documents using OpenAI API"""
     client = OllamaEmbeddings(
-        model="llama3", base_url="http://localhost:11434"
+        model=model, base_url="http://localhost:11434"
     )
 
     texts = [doc.page_content for doc in documents]
@@ -15,9 +15,9 @@ def generate_embeddings(documents):
     return embeddings
 
 
-def get_embedding(text):
+def get_embedding(text, model = 'nomic-embed-text'):
     client = OllamaEmbeddings(
-        model="llama3", base_url="http://localhost:11434"
+        model=model, base_url="http://localhost:11434"
     )
     response = client.embed_query(text)
     return response

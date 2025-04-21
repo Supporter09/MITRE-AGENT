@@ -6,11 +6,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def store_in_qdrant(documents, embeddings, ids, client):
+def store_in_qdrant(documents, embeddings, ids, client, collection_name = "mitre-attack"):
     """Store documents and embeddings in Qdrant"""
 
     # Create collection parameters
-    collection_name = "mitre-attack"
     dimension = len(embeddings[0])
 
     # Check if collection exists, if not create it

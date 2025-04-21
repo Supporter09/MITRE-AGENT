@@ -68,7 +68,7 @@ class MitreAttackAgent:
             url=self.qdrant_url,
             api_key=self.qdrant_api_key,
         )
-        self.mitre_collection_name = "mitre-attack"
+        self.mitre_collection_name = "mitre-attack-nomic"
 
     def setup_model(self, use_openai):
         """Set up the LLM based on configuration"""
