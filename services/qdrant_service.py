@@ -1,3 +1,4 @@
+from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from services.ollama_service import get_embedding
 from dotenv import load_dotenv
@@ -48,30 +49,66 @@ def store_in_qdrant(documents, embeddings, ids, client):
     return True
 
 
-def query_mitre_attack(query, client, top_k=3):
-    """Query the Qdrant collection for similar techniques"""
+def query_mitre_attack(
+    query: str,
+    client: QdrantClient,
+    collection_name: str = "mitre-attack",
+    top_k: int = 3,
+):
+    """
+    Query the Qdrant collection for similar techniques using client.search.
+    """
+    try:
+        query_vector = get_embedding(query)
+        if not isinstance(query_vector, list) or not all(
+            isinstance(x, float) for x in query_vector
+        ):
+            print(
+                f"ERROR: get_embedding did not return a valid list of floats for query: '{query}'"
+            )
+            return []
 
-    # Search in the collection
-    search_results = client.query_points(
-        collection_name="mitre-attack",
-        query_vector=get_embedding(query),
-        limit=top_k,
-    )
-
-    print(search_results)
-    # Format results
-    formatted_results = []
-    for result in search_results:
-        technique_info = result.payload
-        formatted_results.append(
-            {
-                "type": technique_info.get("type"),  # MITRE_ATTACK
-                "technique_id": technique_info.get("technique_id"),  # e.g., T1055.011
-                "name": technique_info.get("name"),
-                "tactics": technique_info.get("tactics", []),
-                "content": technique_info.get("content"),  # Detailed description
-                "score": result.score,
-            }
+        search_results = client.search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=top_k,
+            with_payload=True,
         )
 
-    return formatted_results
+        # The print statement is helpful for debugging the raw output
+        print("--- Raw Search Results ---")
+        print(search_results)
+        print("--------------------------")
+
+        # Format results
+        formatted_results = []
+
+        for scored_point in search_results:
+            payload = scored_point.payload
+
+            if payload is None:
+                print(f"WARN: Found point with id {scored_point.id} but no payload.")
+                continue
+
+            formatted_results.append(
+                {
+                    "type": payload.get("type"),
+                    "technique_id": payload.get("technique_id"),
+                    "name": payload.get("name"),
+                    "tactics": payload.get(
+                        "tactics", []
+                    ),  # Default to empty list if 'tactics' key is missing
+                    "content": payload.get("content"),
+                    "score": scored_point.score,  # Score is an attribute of ScoredPoint
+                    "_id": scored_point.id,  # Optionally include the Qdrant point ID
+                }
+            )
+
+        return formatted_results
+
+    except Exception as e:
+        print(f"An error occurred during the Qdrant query: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return []  # Return empty list on error
