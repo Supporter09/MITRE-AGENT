@@ -73,12 +73,18 @@ class MitreAttackAgent:
     def setup_model(self, use_openai):
         """Set up the LLM based on configuration"""
         if use_openai and os.environ.get("OPENAI_API_KEY"):
-            print("Using OpenAI GPT-4 model.")
+            model = "gpt-4o"
+            if os.getenv("OPENAI_MODEL_NAME"):
+                model = os.getenv("OPENAI_MODEL_NAME")
+            print(f"Using OpenAI {model} model.")
             return ChatOpenAI(
                 api_key=os.environ.get("OPENAI_API_KEY"), model="gpt-4", temperature=0.0
             )
         else:
-            print("Using Ollama qwen2.5:7b model.")
+            model = "qwen2.5:7b"
+            if os.getenv("OLLAMA_MODEL_NAME"):
+                model = os.getenv("OLLAMA_MODEL_NAME")
+            print(f"Using Ollama {model} model.")
             # Ensure Ollama server is running at the base_url
             return ChatOllama(
                 model="qwen2.5:7b", temperature=0.0, base_url="http://localhost:11434"
