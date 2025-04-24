@@ -2,6 +2,17 @@
 
 This repository contains a security multi-agent system built with Langchain.
 
+---
+
+## 🚀 Features
+
+- ✅ Multi-agent architecture powered by Langchain
+- 🧠 Support for both local (Ollama) and cloud (OpenAI) LLMs
+- 🌐 Streamlit web interface for real-time interactions
+- 🧩 Modular and customizable agent workflows
+- 📦 Vector database integration via Qdrant
+- 📚 MITRE ATT&CK knowledge ingestion and retrieval
+
 ## Setup
 
 ### Environment Setup
@@ -27,7 +38,76 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Local Model Setup with Ollama
+
+This project supports running local LLMs and embedding models via [Ollama](https://ollama.com/), an easy-to-use tool for managing and running models locally.
+
+#### 1. Install Ollama
+
+Follow the instructions for your OS from the [official website](https://ollama.com/download), or use the appropriate command below:
+
+##### On macOS:
+
+```bash
+brew install ollama
+```
+
+##### On Linux:
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+#### 2. Start the Ollama service
+```bash
+ollama serve
+```
+
+#### 3. Pull local modals:
+```bash
+ollama pull qwen:2.5-7b # For agents
+
+ollama pull nomic-embed-text # For embedding
+```
+
+Ensure your .env configuration reflects:
+```bash
+# .env
+OLLAMA_MODEL_NAME=qwen:2.5-7b
+```
+
+### OpenAI Model Support
+
+- This system supports both local models via Ollama and cloud models via OpenAI.
+
+- Create a .env file in the root directory and add the following:
+
+- However, you still need to install nomic embed model from Ollama to use with this project
+
+```
+# Cloud model via OpenAI
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL_NAME=gpt-4
+```
+
 ## Usage
+
+### Data Processing with Qdrant
+To ingest MITRE ATT&CK data and store embeddings into Qdrant:
+
+1. Prepare Input
+
+- Download and place a MITRE ATT&CK JSON file (e.g., enterprise-attack.json) in your working directory.
+2. Process and Save to Qdrant
+
+- Run the notebook:
+```
+qdrant-process.ipynb
+```
+- The notebook will:
+    - Parse the MITRE data
+    - Generate embeddings
+    - Store them in the connected Qdrant vector store
+    - Ensure Qdrant is running and accessible before processing the data.
 
 ### Web UI
 
@@ -49,11 +129,4 @@ To run the agent system directly from code:
 ```bash
 python main.py
 ```
-
-## Features
-
-- Multiple AI agents working together
-- Langchain-based workflows
-- Web interface for easy interaction
-- Customizable agent configurations
 
