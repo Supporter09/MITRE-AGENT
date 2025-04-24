@@ -18,8 +18,8 @@ if not all(os.getenv(var) for var in required_vars):
             if not os.getenv(var): print(f"Missing: {var}")
     exit(1)
 
-# use_openai_flag = bool(os.getenv("OPENAI_API_KEY"))
-use_openai_flag = False
+use_openai_flag = bool(os.getenv("OPENAI_API_KEY"))
+# use_openai_flag = False
 agent_instance = MitreAttackAgent(use_openai=use_openai_flag)
 
 test_query = "An attacker gained access using phishing, installed malware persistence via registry run keys, and exfiltrated data to a C2 server."
