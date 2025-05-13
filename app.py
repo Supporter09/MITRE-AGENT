@@ -3,9 +3,12 @@ import json
 import os
 import re
 import uuid
+import ast
+from langchain_core.messages import AIMessage
 
 from agents.mitre_agent_refactored import MitreAttackAgent
 from agents.vuln_agent import VulnerabilityFixingAgent
+from agents.pentest_agent_refactored import WebPentestAgent
 
 # --- Configuration ---
 HISTORY_DIR = "chat_history"
@@ -72,7 +75,9 @@ def save_chat_history(thread_id, messages):
 st.title("🛡️ Security Assistant")
 
 # --- Tab Selection ---
-tab1, tab2 = st.tabs(["MITRE ATT&CK Assistant", "Vulnerability Fixing"])
+tab1, tab2, tab3 = st.tabs(
+    ["MITRE ATT&CK Assistant", "Vulnerability Fixing", "Web Penetration Test"]
+)
 
 # --- Initialize Agents ---
 if "mitre_agent" not in st.session_state:
@@ -86,13 +91,26 @@ if "mitre_agent" not in st.session_state:
 if "vuln_agent" not in st.session_state:
     st.session_state.vuln_agent = VulnerabilityFixingAgent()
 
+# --- Web Pentest Agent ---
+if "pentest_agent" not in st.session_state:
+    st.session_state.pentest_agent = WebPentestAgent(
+        user_id=DEFAULT_USER_ID,
+        session_id=f"pentest_{uuid.uuid4()}",
+        use_openai=False,
+        # use_openai=bool(os.getenv("OPENAI_API_KEY")),
+    )
+
 # --- Initialize Chat Histories Structure (Once per session) ---
 if "chat_histories" not in st.session_state:
     st.session_state.chat_histories = {}
+if "pentest_histories" not in st.session_state:
+    st.session_state.pentest_histories = {}
 
 # --- Initialize current_thread_id if not set ---
 if "current_thread_id" not in st.session_state:
     st.session_state.current_thread_id = DEFAULT_THREAD_ID
+if "current_pentest_thread_id" not in st.session_state:
+    st.session_state.current_pentest_thread_id = "pentest-start-here"
 
 # --- Sidebar for Context and Thread Selection ---
 with st.sidebar:
@@ -316,3 +334,118 @@ with tab2:
                     )
                 else:
                     st.markdown("*⚠️ No analysis response was returned.*")
+
+# --- Web Pentest Tab ---
+with tab3:
+    st.header("Web Penetration Testing Assistant")
+    st.caption(f"Conversation Thread: `{st.session_state.current_pentest_thread_id}`")
+
+    # Load pentest chat history
+    pentest_thread_id = st.session_state.current_pentest_thread_id
+    if pentest_thread_id not in st.session_state.pentest_histories:
+        st.session_state.pentest_histories[pentest_thread_id] = []
+    pentest_messages = st.session_state.pentest_histories[pentest_thread_id]
+
+    # Show current phase and findings if available
+    agent = st.session_state.pentest_agent
+    current_state = getattr(agent, "last_state", None)
+    # if current_state:
+    #     st.info(f"Current Phase: {current_state.get('current_phase', 'N/A')}")
+    #     findings = current_state.get("recon_findings", {})
+    #     if findings:
+    #         st.caption(f"Findings: {str(findings)[:300]}")
+    #     if current_state.get("identified_vulnerabilities"):
+    #         st.caption(
+    #             f"Vulnerabilities: {str([v.name for v in current_state['identified_vulnerabilities']])}"
+    #         )
+
+    message_container = st.container(height=500, border=False)
+    with message_container:
+        if not pentest_messages:
+            st.info("Start the pentest conversation by typing below.")
+        for msg in pentest_messages:
+            role = msg.get("role", "assistant")
+            content = msg.get("content", "")
+            if role == "system" or role == "tool":
+                continue  # Skip system and tool messages
+            # Only display non-empty, plain text assistant messages
+            if role == "assistant":
+                # Try to extract the real content if it's a dict or stringified dict
+                try:
+                    if (
+                        isinstance(content, str)
+                        and content.strip().startswith("{")
+                        and "content" in content
+                    ):
+                        parsed = ast.literal_eval(content)
+                        content = parsed.get("content", content)
+                    elif isinstance(content, dict):
+                        content = content.get("content", "")
+                except Exception:
+                    pass
+                if not content.strip():
+                    continue
+            with st.chat_message(role):
+                st.markdown(content, unsafe_allow_html=True)
+
+    pentest_prompt = st.chat_input(
+        "Describe your target, ask for recon, or request a pentest action...",
+        key=f"pentest_input_{pentest_thread_id}",
+    )
+
+    if pentest_prompt:
+        # 1. Append and save user message
+        user_message = {"role": "user", "content": pentest_prompt}
+        pentest_messages.append(user_message)
+
+        with message_container:
+            with st.chat_message("user"):
+                st.markdown(pentest_prompt)
+
+        # 2. Get agent response (handle tool guidance, etc.)
+        with message_container:
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    try:
+                        state = agent.invoke(pentest_prompt)
+                        agent.last_state = state
+                        # Extract all messages for display
+                        ai_msgs = []
+                        for m in state["messages"]:
+                            # Only show plain text assistant messages, not tool/system/tool_call
+                            if isinstance(m, AIMessage) and not getattr(
+                                m, "tool_calls", None
+                            ):
+                                content = m.content
+                                # Extract real content if it's a dict or stringified dict
+                                try:
+                                    if (
+                                        isinstance(content, str)
+                                        and content.strip().startswith("{")
+                                        and "content" in content
+                                    ):
+                                        parsed = ast.literal_eval(content)
+                                        content = parsed.get("content", content)
+                                    elif isinstance(content, dict):
+                                        content = content.get("content", "")
+                                except Exception:
+                                    pass
+                                if content and content.strip():
+                                    ai_msgs.append(
+                                        {"role": "assistant", "content": content}
+                                    )
+                        # Only show new assistant messages
+                        if ai_msgs:
+                            for msg in ai_msgs:
+                                st.markdown(msg["content"], unsafe_allow_html=True)
+                                pentest_messages.append(msg)
+                        else:
+                            st.markdown("*No assistant response.*")
+                    except Exception as e:
+                        st.error(f"Pentest agent error: {e}")
+                        pentest_messages.append(
+                            {"role": "assistant", "content": f"Error: {e}"}
+                        )
+        # Save pentest history
+        st.session_state.pentest_histories[pentest_thread_id] = pentest_messages
+        st.rerun()
