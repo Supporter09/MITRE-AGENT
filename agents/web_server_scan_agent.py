@@ -5,16 +5,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from dotenv import load_dotenv
 load_dotenv()
 
+
 import json
 import subprocess
 import re
 import logging
-import sys
+import webtech
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import convert_to_messages
 from utils.print_utils import pretty_print_messages
+
 
 # --- Setup Logging ---
 logging.basicConfig(
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 # --- Constants ---
 MAX_TOOL_RETRIES = 3
 DEFAULT_NMAP_FLAGS = "-p- -v -T5"
-
+PATH_TO_WORDLIST = "~/wordlists"
 # --- Core Utilities ---
 
 
@@ -67,40 +69,53 @@ def run_cli_command(
 
 
 # --- Simplified Tool Functions ---
-
-
-def run_whois(domain: str) -> str:
-    """Performs a WHOIS lookup on a domain."""
+def find_directories(domain: str) -> str:
+    """Finds directories on a web server."""
     if not domain or not isinstance(domain, str):
-        return "Error: Invalid domain for WHOIS."
-    # Sanitize domain input slightly to prevent command injection if used directly,
-    # though run_cli_command with shell=True needs careful command construction.
-    # For simple domain names, this is generally okay.
+        return "Error: Invalid domain for ffuf."
+
     safe_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain)
     if not safe_domain:
-        return "Error: Invalid characters in domain for WHOIS."
-    return run_cli_command(f"whois {safe_domain}")
+        return "Error: Invalid characters in domain for ffuf."
+    return run_cli_command(f"ffuf -u {target} -w {PATH_TO_WORDLIST}/common.txt")
 
 
-def run_nslookup(domain: str) -> str:
-    """Performs DNS enumeration for a domain."""
+def find_subdomains(domain: str) -> str:
+    """Finds subdomains on a web server."""
     if not domain or not isinstance(domain, str):
-        return "Error: Invalid domain for NSLOOKUP."
+        return "Error: Invalid domain for ffuf to find subdomains."
+
     safe_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain)
     if not safe_domain:
-        return "Error: Invalid characters in domain for NSLOOKUP."
-    return run_cli_command(f"nslookup {safe_domain}")
+        return "Error: Invalid characters in domain for ffuf to find subdomains."
+    return run_cli_command(
+        f"ffuf -u {target} -w {PATH_TO_WORDLIST}/subdomains-top1million-110000.txt"
+    )
 
 
-def run_nmap(target: str) -> str:
-    """Discovers open ports, services, OS, and versions on a target using Nmap."""
-    if not target or not isinstance(target, str):
-        return "Error: Invalid target for NMAP."
-    # Target can be domain or IP, nmap handles it. Basic sanitization.
-    safe_target = re.sub(r"[^a-zA-Z0-9.-]", "", target)
-    if not safe_target:
-        return "Error: Invalid characters in target for NMAP."
-    return run_cli_command(f"nmap {DEFAULT_NMAP_FLAGS} {safe_target} | grep open")
+def check_webtech(domain: str) -> str:
+    """Checks website technologies on a web server."""
+    if not domain or not isinstance(domain, str):
+        return "Error: Invalid domain to check webtech."
+
+    safe_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain)
+    if not safe_domain:
+        return "Error: Invalid characters in domain for webtech."
+
+    wt = webtech.WebTech(options={"json": True})
+    return wt.start_from_url(domain)
+
+
+# This method should be instruct so llm will take a look to filter web name to a list
+def check_headers(domain: str) -> str:
+    """Checks headers on a web server."""
+    if not domain or not isinstance(domain, str):
+        return "Error: Invalid domain to check headers."
+
+    safe_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain)
+    if not safe_domain:
+        return "Error: Invalid characters in domain to check headers."
+    return run_cli_command(f"curl -I {target}")
 
 
 def setup_model(use_openai: bool = False):
@@ -126,35 +141,40 @@ def setup_model(use_openai: bool = False):
 # use_openai = "OPENAI_API_KEY" in os.environ and bool(os.environ["OPENAI_API_KEY"])
 model = setup_model(use_openai=False)
 
+
+# This agent should server if port 80/443/8080 is open which is the most common port for web servers
 scan_network_agent = create_react_agent(
     model=model,
-    tools=[run_whois, run_nslookup, run_nmap],
+    tools=[find_directories, find_subdomains, check_webtech, check_headers],
     prompt="""
-        You are a network security expert performing reconnaissance on a target domain or IP address.
+        You are a web security expert performing reconnaissance on a target website.
 
         Available tools:
-        - run_whois: Get domain registration and ownership info
-        - run_nslookup: Get DNS records and nameserver info
-        - run_nmap: Scan for open ports and running services
+        - find_directories: Discover hidden directories and files
+        - find_subdomains: Enumerate subdomains
+        - check_webtech: Identify web technologies and frameworks
+        - check_headers: Analyze HTTP response headers
 
         Instructions:
-        1. Use each tool to gather information about the target
+        1. Use each tool systematically to gather information about the target website
         2. If a tool fails 3 times, skip it and continue with other tools
-        3. Format your final findings as a dictionary with these keys:
-           - whois_info: Domain registration details
-           - dns_info: DNS records and nameservers
-           - open_ports: List of open ports and services
+        3. Format your final findings as a JSON object with these keys:
+           - directories: List of discovered directories and files
+           - subdomains: List of enumerated subdomains
+           - technologies: Web technologies, frameworks and versions detected
+           - headers: Security-relevant HTTP headers
            - errors: Any tools that failed or were skipped
 
-        Be thorough but efficient in your scanning. Focus on identifying potential security-relevant information.
+        Process the data carefully and provide structured JSON output that can be consumed by other agents.
+        Focus on identifying potential security weaknesses and attack surfaces.
         """,
-    name="Scan Network Agent",
+    name="Web Server Scan Agent",
 )
 
 # --- Example Usage ---
 if __name__ == "__main__":
     # Example target (replace with your own)
-    target = "206.189.33.53"
+    target = "http://ffuf.me"
 
     # Prepare the input for the agent
     input_data = {"input": target}
