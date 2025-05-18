@@ -1,10 +1,12 @@
+from dotenv import load_dotenv
+
+load_dotenv()
 import os
 import json
 import subprocess
 import re
 import logging
 import sys
-from typing import List, Dict, Optional, Tuple
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
@@ -140,7 +142,7 @@ def pretty_print_messages(update, last_message=False):
 
 def setup_model(use_openai: bool = False):
     if use_openai and os.environ.get("OPENAI_API_KEY"):
-        model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+        model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-4o")
         logger.info(f"Using OpenAI model: {model_name}")
         return ChatOpenAI(
             api_key=os.environ.get("OPENAI_API_KEY"),
@@ -157,8 +159,8 @@ def setup_model(use_openai: bool = False):
             base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
         )
 
-
-model = setup_model(use_openai=True)
+# use_openai = "OPENAI_API_KEY" in os.environ and bool(os.environ["OPENAI_API_KEY"])
+model = setup_model(use_openai=False)
 
 scan_network_agent = create_react_agent(
     model=model,
@@ -198,5 +200,5 @@ if __name__ == "__main__":
 
     # Pretty print the result
     print("\n--- Results ---")
-    for chunk in scan_network_agent.stream({"messages": [{"role": "user", "content": f"Scan the target: {target}"}]}):
+    for chunk in scan_network_agent.stream({"messages": [{"role": "user", "content": f"Scan the target {target}"}]}):
         pretty_print_messages(chunk)
