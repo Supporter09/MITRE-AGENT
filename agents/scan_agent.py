@@ -190,7 +190,7 @@ scan_network_agent = create_react_agent(
 # --- Example Usage ---
 if __name__ == "__main__":
     # Example target (replace with your own)
-    target = "lms.hust.edu.vn"
+    target = "206.189.33.53"
 
     # Prepare the input for the agent
     input_data = {"input": target}
