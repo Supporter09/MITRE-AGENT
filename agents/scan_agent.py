@@ -158,7 +158,7 @@ def setup_model(use_openai: bool = False):
         )
 
 
-model = setup_model()
+model = setup_model(use_openai=True)
 
 scan_network_agent = create_react_agent(
     model=model,
