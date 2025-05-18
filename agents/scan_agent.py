@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # --- Constants ---
 MAX_TOOL_RETRIES = 3
-DEFAULT_NMAP_FLAGS = "-p- -v -t -T5"
+DEFAULT_NMAP_FLAGS = "-p- -v -T5"
 
 # --- Core Utilities ---
 
