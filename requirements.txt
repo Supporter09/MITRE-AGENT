@@ -25,3 +25,5 @@ pydantic
 
 # Sec
 webtech
+
+duckduckgo-search
