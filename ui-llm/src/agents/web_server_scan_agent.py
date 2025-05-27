@@ -118,7 +118,7 @@ def check_headers(domain: str) -> str:
     return run_cli_command(f"curl -I {target}")
 
 
-# use_openai = "OPENAI_API_KEY" in os.environ and bool(os.environ["OPENAI_API_KEY"])
+use_openai = "OPENAI_API_KEY" in os.environ and bool(os.environ["OPENAI_API_KEY"])
 model = load_model(use_openai=False)
 
 

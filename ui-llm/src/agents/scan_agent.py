@@ -103,7 +103,7 @@ def run_nmap(target: str) -> str:
     return run_cli_command(f"nmap {DEFAULT_NMAP_FLAGS} {safe_target} | grep open")
 
 
-# use_openai = "OPENAI_API_KEY" in os.environ and bool(os.environ["OPENAI_API_KEY"])
+use_openai = "OPENAI_API_KEY" in os.environ and bool(os.environ["OPENAI_API_KEY"])
 model = load_model(use_openai=False)
 
 scan_network_agent = create_react_agent(
