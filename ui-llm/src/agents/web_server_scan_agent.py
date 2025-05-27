@@ -94,7 +94,7 @@ def find_subdomains(domain: str) -> str:
 
 
 def check_webtech(domain: str) -> str:
-    """Checks website technologies on a web server."""
+    """Checks website technologies on a web server. HTTP/HTTPS or File is required"""
     if not domain or not isinstance(domain, str):
         return "Error: Invalid domain to check webtech."
 
@@ -132,7 +132,7 @@ web_server_scan_agent = create_react_agent(
         Available tools:
         - find_directories: Discover hidden directories and files
         - find_subdomains: Enumerate subdomains
-        - check_webtech: Identify web technologies and frameworks
+        - check_webtech: Identify web technologies and frameworks. HTTP/HTTPS or File is required
         - check_headers: Analyze HTTP response headers
 
         Instructions:
