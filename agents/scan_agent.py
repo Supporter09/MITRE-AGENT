@@ -13,7 +13,7 @@ import sys
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import convert_to_messages
+from services.model_loader import load_model
 from utils.print_utils import pretty_print_messages
 
 # --- Setup Logging ---
@@ -103,28 +103,8 @@ def run_nmap(target: str) -> str:
     return run_cli_command(f"nmap {DEFAULT_NMAP_FLAGS} {safe_target} | grep open")
 
 
-def setup_model(use_openai: bool = False):
-    if use_openai and os.environ.get("OPENAI_API_KEY"):
-        model_name = os.getenv("OPENAI_MODEL_NAME", "gpt-4o")
-        logger.info(f"Using OpenAI model: {model_name}")
-        return ChatOpenAI(
-            api_key=os.environ.get("OPENAI_API_KEY"),
-            model=model_name,
-            temperature=0.1,
-            streaming=True,
-        )
-    else:
-        model_name = os.getenv("OLLAMA_MODEL_NAME", "qwen2.5:7b")
-        logger.info(f"Using Ollama model: {model_name} from http://localhost:11434")
-        return ChatOllama(
-            model=model_name,
-            temperature=0.1,
-            base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-        )
-
-
 # use_openai = "OPENAI_API_KEY" in os.environ and bool(os.environ["OPENAI_API_KEY"])
-model = setup_model(use_openai=False)
+model = load_model(use_openai=False)
 
 scan_network_agent = create_react_agent(
     model=model,
@@ -147,6 +127,8 @@ scan_network_agent = create_react_agent(
            - errors: Any tools that failed or were skipped
 
         Be thorough but efficient in your scanning. Focus on identifying potential security-relevant information.
+        If you are not able to find any information, just say "No information found"
+        Summarize the findings in a json format for other agents to use
         """,
     name="Scan Network Agent",
 )

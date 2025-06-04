@@ -37,6 +37,20 @@ source venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+### Tools need to install
+- nmap
+```bash
+sudo apt install nmap
+```
+- [ffuf](https://github.com/ffuf/ffuf)
+- whois
+```bash
+sudo apt install whois
+```
+- nslookup
+```bash
+sudo apt install dnsutils
+```
 
 ### Local Model Setup with Ollama
 

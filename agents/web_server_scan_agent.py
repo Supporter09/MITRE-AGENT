@@ -143,7 +143,7 @@ model = setup_model(use_openai=False)
 
 
 # This agent should server if port 80/443/8080 is open which is the most common port for web servers
-scan_network_agent = create_react_agent(
+web_server_scan_agent = create_react_agent(
     model=model,
     tools=[find_directories, find_subdomains, check_webtech, check_headers],
     prompt="""
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     # Pretty print the result
     print("\n--- Results ---")
-    for chunk in scan_network_agent.stream(
+    for chunk in web_server_scan_agent.stream(
         {"messages": [{"role": "user", "content": f"Scan the target {target}"}]}
     ):
         pretty_print_messages(chunk)

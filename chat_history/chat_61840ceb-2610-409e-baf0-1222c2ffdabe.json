@@ -1,0 +1,18 @@
+[
+  {
+    "role": "user",
+    "content": "Hello"
+  },
+  {
+    "role": "assistant",
+    "content": "I encountered an error trying to answer your question. Please try rephrasing."
+  },
+  {
+    "role": "user",
+    "content": "What can you help me"
+  },
+  {
+    "role": "assistant",
+    "content": "I encountered an error trying to answer your question. Please try rephrasing."
+  }
+]
