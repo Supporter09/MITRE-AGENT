@@ -4,7 +4,12 @@ import os
 import re
 import uuid
 import ast
-from langchain_core.messages import AIMessage
+from langchain_core.messages import (
+    convert_to_openai_messages,
+    AIMessage,
+    HumanMessage,
+)
+from langchain_core.messages import convert_to_messages
 
 from agents.mitre_agent_refactored import MitreAttackAgent
 from agents.vuln_agent import VulnerabilityFixingAgent
@@ -75,15 +80,19 @@ def save_chat_history(thread_id, messages):
 st.title("🛡️ Security Assistant")
 
 # --- Tab Selection ---
-tab1, tab2, tab3 = st.tabs(
-    ["MITRE ATT&CK Assistant", "Vulnerability Fixing", "Web Penetration Test"]
+tab1, tab2, tab3, tab4 = st.tabs(
+    [
+        "MITRE ATT&CK Assistant",
+        "Vulnerability Fixing",
+        "Web Penetration Test",
+        "Supervisor Agent",
+    ]
 )
 
 # --- Initialize Agents ---
 if "mitre_agent" not in st.session_state:
     try:
         st.session_state.mitre_agent = MitreAttackAgent()
-        # st.success("MITRE Agent initialized.") # Less verbose success message
     except Exception as e:
         st.error(f"Failed to initialize MITRE Agent: {e}")
         st.stop()
@@ -97,20 +106,30 @@ if "pentest_agent" not in st.session_state:
         user_id=DEFAULT_USER_ID,
         session_id=f"pentest_{uuid.uuid4()}",
         use_openai=False,
-        # use_openai=bool(os.getenv("OPENAI_API_KEY")),
     )
+
+# --- Supervisor Agent ---
+if "supervisor_agent" not in st.session_state:
+    from agents.supervisor import SupervisorAgent
+
+    st.session_state.supervisor_agent = SupervisorAgent()
+    st.session_state.supervisor = st.session_state.supervisor_agent.create_agent()
 
 # --- Initialize Chat Histories Structure (Once per session) ---
 if "chat_histories" not in st.session_state:
     st.session_state.chat_histories = {}
 if "pentest_histories" not in st.session_state:
     st.session_state.pentest_histories = {}
+if "supervisor_histories" not in st.session_state:
+    st.session_state.supervisor_histories = {}
 
 # --- Initialize current_thread_id if not set ---
 if "current_thread_id" not in st.session_state:
     st.session_state.current_thread_id = DEFAULT_THREAD_ID
 if "current_pentest_thread_id" not in st.session_state:
     st.session_state.current_pentest_thread_id = "pentest-start-here"
+if "current_supervisor_thread_id" not in st.session_state:
+    st.session_state.current_supervisor_thread_id = "supervisor-start-here"
 
 # --- Sidebar for Context and Thread Selection ---
 with st.sidebar:
@@ -448,4 +467,76 @@ with tab3:
                         )
         # Save pentest history
         st.session_state.pentest_histories[pentest_thread_id] = pentest_messages
+        st.rerun()
+
+# --- Supervisor Tab ---
+with tab4:
+    st.header("Supervisor Agent")
+    st.caption(
+        f"Conversation Thread: `{st.session_state.current_supervisor_thread_id}`"
+    )
+
+    # Load supervisor chat history
+    supervisor_thread_id = st.session_state.current_supervisor_thread_id
+    if supervisor_thread_id not in st.session_state.supervisor_histories:
+        st.session_state.supervisor_histories[supervisor_thread_id] = []
+    supervisor_messages = st.session_state.supervisor_histories[supervisor_thread_id]
+
+    message_container = st.container(height=500, border=False)
+    with message_container:
+        if not supervisor_messages:
+            st.info("Start the supervisor conversation by typing below.")
+        for msg in supervisor_messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+    supervisor_prompt = st.chat_input(
+        "Ask the supervisor agent for help...",
+        key=f"supervisor_input_{supervisor_thread_id}",
+    )
+
+    if supervisor_prompt:
+        # 1. Append and save user message
+        user_message = {"role": "user", "content": supervisor_prompt}
+        supervisor_messages.append(user_message)
+
+        with message_container:
+            with st.chat_message("user"):
+                st.markdown(supervisor_prompt)
+
+        # 2. Get supervisor response
+        with message_container:
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    try:
+                        response = st.session_state.supervisor.stream(
+                            {"messages": supervisor_messages}
+                        )
+                        for chunk in response:
+                            for node_name, node_update in chunk.items():
+                                update_label = f"Update from node {node_name}:"
+                                print(update_label)
+                                print()
+
+                                messages = convert_to_openai_messages(node_update["messages"])
+
+                                # Only append the last assistant message
+                                for m in messages:
+                                    print(m)
+
+                                assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
+                                if assistant_messages:
+                                    last_message = assistant_messages[-1]
+                                    st.markdown(last_message["content"])
+                                    supervisor_messages.append(last_message)
+                    except Exception as e:
+                        st.error(f"Supervisor agent error: {e}")
+                        supervisor_messages.append(
+                            {"role": "assistant", "content": f"Error: {e}"}
+                        )
+
+        # Save supervisor history
+        st.session_state.supervisor_histories[supervisor_thread_id] = (
+            supervisor_messages
+        )
         st.rerun()
