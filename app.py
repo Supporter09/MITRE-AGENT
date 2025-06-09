@@ -524,7 +524,12 @@ with tab4:
                                 for m in messages:
                                     print(m)
 
-                                assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
+                                assistant_messages = [
+                                    msg for msg in messages
+                                    if msg.get("role") == "assistant"
+                                    and msg.get("content")
+                                    and not msg.get("content").startswith("Transferring")
+                                ]
                                 if assistant_messages:
                                     last_message = assistant_messages[-1]
                                     st.markdown(last_message["content"])
