@@ -37,17 +37,35 @@ source venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+
 ### Tools need to install
+
+- Docker and Docker Compose
+
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo apt install docker-compose
+```
+
 - nmap
+
 ```bash
 sudo apt install nmap
 ```
+
 - [ffuf](https://github.com/ffuf/ffuf)
 - whois
+
 ```bash
 sudo apt install whois
 ```
+
 - nslookup
+
 ```bash
 sudo apt install dnsutils
 ```
@@ -67,16 +85,19 @@ brew install ollama
 ```
 
 ##### On Linux:
+
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
 #### 2. Start the Ollama service
+
 ```bash
 ollama serve
 ```
 
 #### 3. Pull local modals:
+
 ```bash
 ollama pull qwen:2.5-7b # For agents
 
@@ -84,6 +105,7 @@ ollama pull nomic-embed-text # For embedding
 ```
 
 Ensure your .env configuration reflects:
+
 ```bash
 # .env
 OLLAMA_MODEL_NAME=qwen:2.5-7b
@@ -106,26 +128,40 @@ OPENAI_MODEL_NAME=gpt-4
 ## Usage
 
 ### Data Processing with Qdrant
+
 To ingest MITRE ATT&CK data and store embeddings into Qdrant:
 
 1. Prepare Input
 
 - Download and place a MITRE ATT&CK JSON file (e.g., enterprise-attack.json) in your working directory.
+
 2. Process and Save to Qdrant
 
 - Run the notebook:
+
 ```
 qdrant-process.ipynb
 ```
+
 - The notebook will:
-    - Parse the MITRE data
-    - Generate embeddings
-    - Store them in the connected Qdrant vector store
-    - Ensure Qdrant is running and accessible before processing the data.
+  - Parse the MITRE data
+  - Generate embeddings
+  - Store them in the connected Qdrant vector store
+  - Ensure Qdrant is running and accessible before processing the data.
 
 ### Web UI
 
 To use the web interface:
+
+#### Option 1: Using Docker Compose (Recommended)
+
+```bash
+docker-compose up
+```
+
+Then open your browser and navigate to `http://localhost:8051`
+
+#### Option 2: Direct Run
 
 ```bash
 streamlit run app.py
@@ -143,4 +179,3 @@ To run the agent system directly from code:
 ```bash
 python main.py
 ```
-
