@@ -148,7 +148,9 @@ with st.sidebar:
     try:
         history_files = [f for f in os.listdir(HISTORY_DIR) if f.endswith(".json")]
         # Sort files by modification time, newest first
-        history_files.sort(key=lambda f: os.path.getmtime(os.path.join(HISTORY_DIR, f)), reverse=True)
+        history_files.sort(
+            key=lambda f: os.path.getmtime(os.path.join(HISTORY_DIR, f)), reverse=True
+        )
 
         if not history_files:
             st.caption("No past conversations found.")
@@ -179,8 +181,13 @@ with st.sidebar:
                         key=f"history_{thread_id_from_file}",
                         use_container_width=True,
                     ):
-                        if st.session_state.current_supervisor_thread_id != thread_id_from_file:
-                            st.session_state.current_supervisor_thread_id = thread_id_from_file
+                        if (
+                            st.session_state.current_supervisor_thread_id
+                            != thread_id_from_file
+                        ):
+                            st.session_state.current_supervisor_thread_id = (
+                                thread_id_from_file
+                            )
                             st.rerun()
 
     except FileNotFoundError:
@@ -334,7 +341,9 @@ with tab3:
     # Load supervisor chat history
     supervisor_thread_id = st.session_state.current_supervisor_thread_id
     if supervisor_thread_id not in st.session_state.supervisor_histories:
-        st.session_state.supervisor_histories[supervisor_thread_id] = []
+        st.session_state.supervisor_histories[supervisor_thread_id] = load_chat_history(
+            supervisor_thread_id
+        )
     supervisor_messages = st.session_state.supervisor_histories[supervisor_thread_id]
 
     message_container = st.container(height=500, border=False)
@@ -354,6 +363,7 @@ with tab3:
         # 1. Append and save user message
         user_message = {"role": "user", "content": supervisor_prompt}
         supervisor_messages.append(user_message)
+        save_chat_history(supervisor_thread_id, supervisor_messages)
 
         with message_container:
             with st.chat_message("user"):
@@ -397,14 +407,13 @@ with tab3:
                                     last_message = assistant_messages[-1]
                                     st.markdown(last_message["content"])
                                     supervisor_messages.append(last_message)
+                                    save_chat_history(
+                                        supervisor_thread_id, supervisor_messages
+                                    )
                     except Exception as e:
                         st.error(f"Supervisor agent error: {e}")
-                        supervisor_messages.append(
-                            {"role": "assistant", "content": f"Error: {e}"}
-                        )
+                        error_message = {"role": "assistant", "content": f"Error: {e}"}
+                        supervisor_messages.append(error_message)
+                        save_chat_history(supervisor_thread_id, supervisor_messages)
 
-        # Save supervisor history
-        st.session_state.supervisor_histories[supervisor_thread_id] = (
-            supervisor_messages
-        )
         st.rerun()
