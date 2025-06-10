@@ -32,7 +32,7 @@ sudo apt install docker-compose
 docker-compose up
 ```
 
-3. Access the web interface at `http://localhost:8051`
+3. Access the web interface at `http://localhost:8501`
 
 ### Method 2: Local Installation
 
