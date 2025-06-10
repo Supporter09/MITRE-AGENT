@@ -13,11 +13,11 @@ from langchain_core.messages import convert_to_messages
 
 from agents.mitre_agent_refactored import MitreAttackAgent
 from agents.vuln_agent import VulnerabilityFixingAgent
-from agents.pentest_agent_refactored import WebPentestAgent
 
 # --- Configuration ---
 HISTORY_DIR = "chat_history"
-DEFAULT_THREAD_ID = "start-here"
+DEFAULT_THREAD_ID = "chat_0"
+DEFAULT_SUPERVISOR_THREAD_ID = "supervisor_chat_0"
 DEFAULT_USER_ID = "default-user"
 
 # --- Ensure History Directory Exists ---
@@ -80,11 +80,10 @@ def save_chat_history(thread_id, messages):
 st.title("🛡️ Security Assistant")
 
 # --- Tab Selection ---
-tab1, tab2, tab3, tab4 = st.tabs(
+tab1, tab2, tab3 = st.tabs(
     [
         "MITRE ATT&CK Assistant",
         "Vulnerability Fixing",
-        "Web Penetration Test",
         "Supervisor Agent",
     ]
 )
@@ -100,14 +99,6 @@ if "mitre_agent" not in st.session_state:
 if "vuln_agent" not in st.session_state:
     st.session_state.vuln_agent = VulnerabilityFixingAgent()
 
-# --- Web Pentest Agent ---
-if "pentest_agent" not in st.session_state:
-    st.session_state.pentest_agent = WebPentestAgent(
-        user_id=DEFAULT_USER_ID,
-        session_id=f"pentest_{uuid.uuid4()}",
-        use_openai=False,
-    )
-
 # --- Supervisor Agent ---
 if "supervisor_agent" not in st.session_state:
     from agents.supervisor import SupervisorAgent
@@ -118,18 +109,14 @@ if "supervisor_agent" not in st.session_state:
 # --- Initialize Chat Histories Structure (Once per session) ---
 if "chat_histories" not in st.session_state:
     st.session_state.chat_histories = {}
-if "pentest_histories" not in st.session_state:
-    st.session_state.pentest_histories = {}
 if "supervisor_histories" not in st.session_state:
     st.session_state.supervisor_histories = {}
 
 # --- Initialize current_thread_id if not set ---
 if "current_thread_id" not in st.session_state:
     st.session_state.current_thread_id = DEFAULT_THREAD_ID
-if "current_pentest_thread_id" not in st.session_state:
-    st.session_state.current_pentest_thread_id = "pentest-start-here"
 if "current_supervisor_thread_id" not in st.session_state:
-    st.session_state.current_supervisor_thread_id = "supervisor-start-here"
+    st.session_state.current_supervisor_thread_id = DEFAULT_SUPERVISOR_THREAD_ID
 
 # --- Sidebar for Context and Thread Selection ---
 with st.sidebar:
@@ -141,38 +128,60 @@ with st.sidebar:
         st.session_state.current_thread_id = new_thread_id
         # Ensure history entry exists for the new thread (will be empty)
         st.session_state.chat_histories[new_thread_id] = []
-        # No need to save empty history here, load will handle it
+
         st.success(f"Started new chat: {new_thread_id}")
         # Rerun to reflect the new thread ID in the input box and clear chat area
         st.rerun()
 
-    st.markdown("---")
-    st.subheader("Past Conversations")
+    if st.button("✨ New Supervisor Chat", use_container_width=True):
+        new_thread_id = f"supervisor_chat_{uuid.uuid4()}"  # Generate unique ID
+        st.session_state.current_supervisor_thread_id = new_thread_id
+        # Ensure history entry exists for the new thread (will be empty)
+        st.session_state.supervisor_histories[new_thread_id] = []
 
-    # List existing chat history files
+        st.success(f"Started new supervisor chat: {new_thread_id}")
+        # Rerun to reflect the new thread ID in the input box and clear chat area
+        st.rerun()
+
+    st.markdown("---")
+
     try:
         history_files = [f for f in os.listdir(HISTORY_DIR) if f.endswith(".json")]
-        # Sort files, maybe newest first? (Optional: based on modification time)
-        # history_files.sort(key=lambda f: os.path.getmtime(os.path.join(HISTORY_DIR, f)), reverse=True)
+        # Sort files by modification time, newest first
+        history_files.sort(key=lambda f: os.path.getmtime(os.path.join(HISTORY_DIR, f)), reverse=True)
 
         if not history_files:
             st.caption("No past conversations found.")
         else:
-            # Display button for each history file
+            # Split and display regular chat histories
+            st.subheader("MITRE Chats")
             for filename in history_files:
-                thread_id_from_file = filename[:-5]  # Remove .json extension
-                # Use a more user-friendly display name if possible, here just using the ID
-                display_name = thread_id_from_file
-                # Make button slightly smaller or style differently if needed
-                if st.button(
-                    display_name,
-                    key=f"history_{thread_id_from_file}",
-                    use_container_width=True,
-                ):
-                    if st.session_state.current_thread_id != thread_id_from_file:
-                        st.session_state.current_thread_id = thread_id_from_file
-                        # No need to explicitly load here, the main logic below handles it
-                        st.rerun()  # Rerun to load the selected chat
+                if filename.startswith("chat_"):
+                    thread_id_from_file = filename[:-5]  # Remove .json extension
+                    display_name = thread_id_from_file
+                    if st.button(
+                        display_name,
+                        key=f"history_{thread_id_from_file}",
+                        use_container_width=True,
+                    ):
+                        if st.session_state.current_thread_id != thread_id_from_file:
+                            st.session_state.current_thread_id = thread_id_from_file
+                            st.rerun()
+
+            # Split and display supervisor chat histories
+            st.subheader("Supervisor Chats")
+            for filename in history_files:
+                if filename.startswith("supervisor_chat_"):
+                    thread_id_from_file = filename[:-5]  # Remove .json extension
+                    display_name = thread_id_from_file
+                    if st.button(
+                        display_name,
+                        key=f"history_{thread_id_from_file}",
+                        use_container_width=True,
+                    ):
+                        if st.session_state.current_supervisor_thread_id != thread_id_from_file:
+                            st.session_state.current_supervisor_thread_id = thread_id_from_file
+                            st.rerun()
 
     except FileNotFoundError:
         st.error(f"History directory not found: {HISTORY_DIR}")
@@ -180,48 +189,9 @@ with st.sidebar:
         st.error(f"Error listing history files: {e}")
 
     st.markdown("---")
-    st.subheader("Current Session")
-
-    # Input to manually set or view the thread ID
-    current_thread_id_input = st.text_input(
-        "Current Thread ID",
-        value=st.session_state.current_thread_id,  # Reflects current state
-        key="thread_id_input",
-        help="Current chat session ID. Click a past conversation above to switch.",
-        disabled=True,  # Disable manual editing if buttons are the primary way
-    )
 
     st.write(f"User ID: `{DEFAULT_USER_ID}`")
 
-    # Optional: Button to clear current thread history
-    if st.button("🗑️ Clear Current Thread History"):
-        active_thread_id_on_clear = st.session_state.current_thread_id
-        # Also delete the file
-        filepath_to_delete = get_history_filepath(active_thread_id_on_clear)
-        if active_thread_id_on_clear in st.session_state.chat_histories:
-            del st.session_state.chat_histories[
-                active_thread_id_on_clear
-            ]  # Remove from session state cache
-        if os.path.exists(filepath_to_delete):
-            try:
-                os.remove(filepath_to_delete)
-                st.success(
-                    f"History for thread '{active_thread_id_on_clear}' cleared and file deleted."
-                )
-                # Switch to default thread or a new one after deleting
-                st.session_state.current_thread_id = DEFAULT_THREAD_ID
-                st.rerun()
-            except Exception as e:
-                st.error(f"Could not delete history file {filepath_to_delete}: {e}")
-        else:
-            st.warning(
-                f"History file for '{active_thread_id_on_clear}' not found for deletion."
-            )
-            # Still clear from session state if it exists there
-            if active_thread_id_on_clear in st.session_state.chat_histories:
-                del st.session_state.chat_histories[active_thread_id_on_clear]
-            st.session_state.current_thread_id = DEFAULT_THREAD_ID  # Reset to default
-            st.rerun()
 
 # --- Load History for the Current Thread ---
 active_thread_id = st.session_state.current_thread_id
@@ -354,123 +324,8 @@ with tab2:
                 else:
                     st.markdown("*⚠️ No analysis response was returned.*")
 
-# --- Web Pentest Tab ---
-with tab3:
-    st.header("Web Penetration Testing Assistant")
-    st.caption(f"Conversation Thread: `{st.session_state.current_pentest_thread_id}`")
-
-    # Load pentest chat history
-    pentest_thread_id = st.session_state.current_pentest_thread_id
-    if pentest_thread_id not in st.session_state.pentest_histories:
-        st.session_state.pentest_histories[pentest_thread_id] = []
-    pentest_messages = st.session_state.pentest_histories[pentest_thread_id]
-
-    # Show current phase and findings if available
-    agent = st.session_state.pentest_agent
-    current_state = getattr(agent, "last_state", None)
-    # if current_state:
-    #     st.info(f"Current Phase: {current_state.get('current_phase', 'N/A')}")
-    #     findings = current_state.get("recon_findings", {})
-    #     if findings:
-    #         st.caption(f"Findings: {str(findings)[:300]}")
-    #     if current_state.get("identified_vulnerabilities"):
-    #         st.caption(
-    #             f"Vulnerabilities: {str([v.name for v in current_state['identified_vulnerabilities']])}"
-    #         )
-
-    message_container = st.container(height=500, border=False)
-    with message_container:
-        if not pentest_messages:
-            st.info("Start the pentest conversation by typing below.")
-        for msg in pentest_messages:
-            role = msg.get("role", "assistant")
-            content = msg.get("content", "")
-            if role == "system" or role == "tool":
-                continue  # Skip system and tool messages
-            # Only display non-empty, plain text assistant messages
-            if role == "assistant":
-                # Try to extract the real content if it's a dict or stringified dict
-                try:
-                    if (
-                        isinstance(content, str)
-                        and content.strip().startswith("{")
-                        and "content" in content
-                    ):
-                        parsed = ast.literal_eval(content)
-                        content = parsed.get("content", content)
-                    elif isinstance(content, dict):
-                        content = content.get("content", "")
-                except Exception:
-                    pass
-                if not content.strip():
-                    continue
-            with st.chat_message(role):
-                st.markdown(content, unsafe_allow_html=True)
-
-    pentest_prompt = st.chat_input(
-        "Describe your target, ask for recon, or request a pentest action...",
-        key=f"pentest_input_{pentest_thread_id}",
-    )
-
-    if pentest_prompt:
-        # 1. Append and save user message
-        user_message = {"role": "user", "content": pentest_prompt}
-        pentest_messages.append(user_message)
-
-        with message_container:
-            with st.chat_message("user"):
-                st.markdown(pentest_prompt)
-
-        # 2. Get agent response (handle tool guidance, etc.)
-        with message_container:
-            with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    try:
-                        state = agent.invoke(pentest_prompt)
-                        agent.last_state = state
-                        # Extract all messages for display
-                        ai_msgs = []
-                        for m in state["messages"]:
-                            # Only show plain text assistant messages, not tool/system/tool_call
-                            if isinstance(m, AIMessage) and not getattr(
-                                m, "tool_calls", None
-                            ):
-                                content = m.content
-                                # Extract real content if it's a dict or stringified dict
-                                try:
-                                    if (
-                                        isinstance(content, str)
-                                        and content.strip().startswith("{")
-                                        and "content" in content
-                                    ):
-                                        parsed = ast.literal_eval(content)
-                                        content = parsed.get("content", content)
-                                    elif isinstance(content, dict):
-                                        content = content.get("content", "")
-                                except Exception:
-                                    pass
-                                if content and content.strip():
-                                    ai_msgs.append(
-                                        {"role": "assistant", "content": content}
-                                    )
-                        # Only show new assistant messages
-                        if ai_msgs:
-                            for msg in ai_msgs:
-                                st.markdown(msg["content"], unsafe_allow_html=True)
-                                pentest_messages.append(msg)
-                        else:
-                            st.markdown("*No assistant response.*")
-                    except Exception as e:
-                        st.error(f"Pentest agent error: {e}")
-                        pentest_messages.append(
-                            {"role": "assistant", "content": f"Error: {e}"}
-                        )
-        # Save pentest history
-        st.session_state.pentest_histories[pentest_thread_id] = pentest_messages
-        st.rerun()
-
 # --- Supervisor Tab ---
-with tab4:
+with tab3:
     st.header("Supervisor Agent")
     st.caption(
         f"Conversation Thread: `{st.session_state.current_supervisor_thread_id}`"
@@ -509,15 +364,10 @@ with tab4:
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
                     try:
-                        config = {
-                            "configurable": {
-                                "thread_id": supervisor_thread_id
-                            }
-                        }
+                        config = {"configurable": {"thread_id": supervisor_thread_id}}
 
                         response = st.session_state.supervisor.stream(
-                            {"messages": supervisor_messages},
-                            config
+                            {"messages": supervisor_messages}, config
                         )
                         for chunk in response:
                             for node_name, node_update in chunk.items():
@@ -525,17 +375,23 @@ with tab4:
                                 print(update_label)
                                 print()
 
-                                messages = convert_to_openai_messages(node_update["messages"])
+                                messages = convert_to_openai_messages(
+                                    node_update["messages"]
+                                )
 
                                 # Only append the last assistant message
                                 for m in messages:
                                     print(m)
 
                                 assistant_messages = [
-                                    msg for msg in messages
+                                    msg
+                                    for msg in messages
                                     if msg.get("role") == "assistant"
                                     and msg.get("content")
-                                    and not msg.get("content").startswith("Transferring")
+                                    and msg.get("name") == "supervisor"
+                                    and not msg.get("content").startswith(
+                                        "Transferring"
+                                    )
                                 ]
                                 if assistant_messages:
                                     last_message = assistant_messages[-1]
