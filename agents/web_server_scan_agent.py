@@ -10,9 +10,6 @@ import json
 import subprocess
 import re
 import logging
-import webtech
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from utils.print_utils import pretty_print_messages
 from services.model_loader import load_model
@@ -93,19 +90,6 @@ def find_subdomains(domain: str) -> str:
     )
 
 
-def check_webtech(domain: str) -> str:
-    """Checks website technologies on a web server. HTTP/HTTPS or File is required"""
-    if not domain or not isinstance(domain, str):
-        return "Error: Invalid domain to check webtech."
-
-    safe_domain = re.sub(r"[^a-zA-Z0-9.-]", "", domain)
-    if not safe_domain:
-        return "Error: Invalid characters in domain for webtech."
-
-    wt = webtech.WebTech(options={"json": True})
-    return wt.start_from_url(domain)
-
-
 # This method should be instruct so llm will take a look to filter web name to a list
 def check_headers(domain: str) -> str:
     """Checks headers on a web server."""
@@ -125,14 +109,13 @@ model = load_model(use_openai=False)
 # This agent should server if port 80/443/8080 is open which is the most common port for web servers
 web_server_scan_agent = create_react_agent(
     model=model,
-    tools=[find_directories, find_subdomains, check_webtech, check_headers],
+    tools=[find_directories, find_subdomains, check_headers],
     prompt="""
         You are a web security expert performing reconnaissance on a target website.
 
         Available tools:
         - find_directories: Discover hidden directories and files
         - find_subdomains: Enumerate subdomains
-        - check_webtech: Identify web technologies and frameworks. HTTP/HTTPS or File is required
         - check_headers: Analyze HTTP response headers
 
         Instructions:

@@ -3,8 +3,13 @@ langchain
 langgraph
 langmem
 langgraph-supervisor
+langchain-community
 langchain-openai
+langchain-core
 langchain-ollama
+langgraph-api
+langgraph-checkpoint-postgres
+langsmith
 openai
 
 # Local Ollama models
@@ -24,10 +29,9 @@ requests
 pydantic
 
 # Sec
-webtech
-
 duckduckgo-search
+googlesearch-python
+beautifulsoup4
 
-langchain-community
-
-langgraph-cli[inmem]
+#Search
+gpt-researcher

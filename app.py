@@ -509,8 +509,15 @@ with tab4:
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
                     try:
+                        config = {
+                            "configurable": {
+                                "thread_id": supervisor_thread_id
+                            }
+                        }
+
                         response = st.session_state.supervisor.stream(
-                            {"messages": supervisor_messages}
+                            {"messages": supervisor_messages},
+                            config
                         )
                         for chunk in response:
                             for node_name, node_update in chunk.items():
