@@ -1,15 +1,13 @@
+from datetime import datetime
 import streamlit as st
 import json
 import os
 import re
 import uuid
-import ast
+
 from langchain_core.messages import (
     convert_to_openai_messages,
-    AIMessage,
-    HumanMessage,
 )
-from langchain_core.messages import convert_to_messages
 
 from agents.mitre_agent_refactored import MitreAttackAgent
 from agents.vuln_agent import VulnerabilityFixingAgent
@@ -84,7 +82,7 @@ tab1, tab2, tab3 = st.tabs(
     [
         "MITRE ATT&CK Assistant",
         "Vulnerability Fixing",
-        "Supervisor Agent",
+        "Web Pentest Assistant",
     ]
 )
 
@@ -389,9 +387,16 @@ with tab3:
                                     node_update["messages"]
                                 )
 
-                                # Only append the last assistant message
+                                # Save messages to log file with supervisor thread ID
+                                log_dir = "logs"
+                                os.makedirs(log_dir, exist_ok=True)
+                                log_file = os.path.join(
+                                    log_dir, f"supervisor_{supervisor_thread_id}.log"
+                                )
+
                                 for m in messages:
-                                    print(m)
+                                    with open(log_file, "a") as f:
+                                        f.write(f"{datetime.now()}: {m}\n")
 
                                 assistant_messages = [
                                     msg
