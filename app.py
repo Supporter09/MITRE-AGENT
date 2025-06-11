@@ -394,10 +394,6 @@ with tab3:
                                     log_dir, f"supervisor_{supervisor_thread_id}.log"
                                 )
 
-                                for m in messages:
-                                    with open(log_file, "a") as f:
-                                        f.write(f"{datetime.now()}: {m}\n")
-
                                 assistant_messages = [
                                     msg
                                     for msg in messages

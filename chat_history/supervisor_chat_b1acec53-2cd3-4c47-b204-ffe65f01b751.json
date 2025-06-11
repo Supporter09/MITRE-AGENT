@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "Hello"
+  },
+  {
+    "role": "assistant",
+    "name": "supervisor",
+    "content": "Hello! How can I assist you with your cybersecurity needs today? Are you looking to conduct a penetration test, or do you have specific security concerns or objectives in mind?"
+  },
+  {
+    "role": "user",
+    "content": "Can you help me solve websockfish picoCTF web exploit challenge"
+  },
+  {
+    "role": "assistant",
+    "name": "supervisor",
+    "tool_calls": [
+      {
+        "type": "function",
+        "id": "call_OR0TbFdKr5drQ6hb4j7V1wlW",
+        "function": {
+          "name": "transfer_to_web_search_expert",
+          "arguments": "{}"
+        }
+      }
+    ],
+    "content": "Certainly! To assist you with solving the \"websockfish\" challenge from picoCTF, we'll start by gathering any available information on the challenge. I will coordinate with our web search expert to look for some relevant write-ups or information about this specific challenge.\n\nLet's begin by doing that."
+  },
+  {
+    "role": "assistant",
+    "content": "Error: 'charmap' codec can't encode character '\\U0001f310' in position 9541: character maps to <undefined>"
+  },
+  {
+    "role": "user",
+    "content": "Can you help me solve websockfish picoCTF web exploit challenge"
+  },
+  {
+    "role": "assistant",
+    "content": "Error: Found AIMessages with tool_calls that do not have a corresponding ToolMessage. Here are the first few of those tool calls: [{'name': 'transfer_to_web_search_expert', 'args': {}, 'id': 'call_OR0TbFdKr5drQ6hb4j7V1wlW', 'type': 'tool_call'}].\n\nEvery tool call (LLM requesting to call a tool) in the message history MUST have a corresponding ToolMessage (result of a tool invocation to return to the LLM) - this is required by most LLM providers.\nFor troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/INVALID_CHAT_HISTORY"
+  }
+]
